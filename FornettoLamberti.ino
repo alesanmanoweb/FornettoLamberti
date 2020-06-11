@@ -9,6 +9,10 @@
 // range = 64
 #define RANGE ((1 << CONTROLBITS) - 1)
 
+// number of microsends before the actual zero crossing we get the interrupt
+// tested at 240VAC with 2 x 47k resistors on H11L1
+#define TURN_ON_WAIT 840
+
 //volatile static bool cycle = true;
 volatile static uint32_t powerA = 48;
 volatile static uint32_t stateA = 0;
@@ -33,18 +37,19 @@ void setup()
 
 void isr()
 {
-  // wait for real cross (15Vrms)
-  delayMicroseconds(840); // do not trust too much
+  // turn off everything before the zero-crossing
+  digitalWrite(TRIACA, LOW);
+  digitalWrite(TRIACB, LOW);
 
+  // wait for the actual zero-crossing
+  delayMicroseconds(TURN_ON_WAIT);
+
+  // let's check if we have to turn on
   stateA += powerA;
   if(stateA >= RANGE)
   {
     stateA -= RANGE;
     digitalWrite(TRIACA, HIGH);
-  }
-  else
-  {
-    digitalWrite(TRIACA, LOW);
   }
 
   stateB += powerB;
@@ -52,10 +57,6 @@ void isr()
   {
     stateB -= RANGE;
     digitalWrite(TRIACB, HIGH);
-  }
-  else
-  {
-    digitalWrite(TRIACB, LOW);
   }
 }
 
